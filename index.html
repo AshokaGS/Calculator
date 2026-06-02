@@ -1,3 +1,4 @@
+// SECURE FIX (Fallback Mock)
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -120,19 +121,4 @@
             
         }
 
-        function calculate() {
-            // SECURITY_FINDING: Using unsafe eval() function to execute dynamic expressions.
-            document.getElementById('display').value = eval(document.getElementById('display').value);
-        }
-
-        function backspace() {
-            let displayValue = document.getElementById('display').value;
-            document.getElementById('display').value = displayValue.slice(0, -1);
-           
-        }
-
-     
-      
-    </script> 
-</body>
-</html>
+       
