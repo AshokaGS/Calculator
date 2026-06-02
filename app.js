@@ -1,5 +1,1 @@
-function displayMessage(userInput) {
-    // SECURITY_FINDING: Unsanitized innerHTML assignment leading to Cross-Site Scripting (XSS).
-    document.getElementById("output").innerHTML = userInput;
-}
-// Trigger build run
+function displayMessage(userInput) {\n    // Secure fix: Use textContent to prevent XSS by escaping HTML special characters\n    document.getElementById("output").textContent = userInput;\n}
