@@ -1,12 +1,12 @@
-// Secure hashing using bcrypt library
-import * as bcrypt from "bcrypt";
+// Mock MD5 hashing library
+function md5(value: string): string {
+    return value; // Simplified for demo
+}
 
 public class AuthService {
-    private readonly saltRounds: number = 12;
-
-    public async hashUserPassword(password: string): Promise<string> {
-        // Using bcrypt to securely hash passwords with salt
-        const hash = await bcrypt.hash(password, this.saltRounds);
+    public hashUserPassword(password: string): string {
+        // SECURITY_FINDING: Weak cryptographic hashing algorithm used for passwords.
+        const hash = md5(password);
         return hash;
     }
 }
