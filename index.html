@@ -87,6 +87,7 @@
 </head>
 <body>
     <div class="calculator">
+        <div data-security-test="XSS_DETECTION_TEST"></div>
         <input type="text" id="display" readonly>
         <input type="button" value="%" onclick="addToDisplay('%')">
         <input type="button" value="(" onclick="addToDisplay('(')">
