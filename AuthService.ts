@@ -1,12 +1,20 @@
-// Mock MD5 hashing library
-function md5(value: string): string {
-    return value; // Simplified for demo
+class AuthService {
+    public hashUserPassword(password: string): string {
+        // Use a secure hashing algorithm instead of MD5
+        // For demonstration, using a simple SHA-256 implementation
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        // Note: crypto.subtle.digest returns a Promise, so this method should be async
+        throw new Error('Use async hashUserPassword method with crypto.subtle.digest for secure hashing');
+    }
 }
 
-public class AuthService {
-    public hashUserPassword(password: string): string {
-        // SECURITY_FINDING: Weak cryptographic hashing algorithm used for passwords.
-        const hash = md5(password);
-        return hash;
-    }
+// Example of an async secure hash function
+export async function hashUserPasswordAsync(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
 }
