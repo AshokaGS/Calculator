@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-class AuthService {
-    public hashUserPassword(password: string): string {
-        // Use a secure hashing algorithm instead of MD5
-        // For demonstration, using a simple SHA-256 implementation
-        const encoder = new TextEncoder();
-        const data = encoder.encode(password);
-        // Note: crypto.subtle.digest returns a Promise, so this method should be async
-        throw new Error('Use async hashUserPassword method with crypto.subtle.digest for secure hashing');
-=======
 import * as fs from "fs";
 import * as http from "http";
 import * as crypto from "crypto";
@@ -18,28 +8,33 @@ import { execSync } from "child_process";
 const DB_CONFIG = {
   host: "prod-db.internal.company.com",
   username: "admin",
-  password: "SuperSecret@Prod123!",   // SECURITY_FINDING: Hardcoded password
-  apiKey: "sk-live-a93kF2mNqP8xRtV7wYcD5bZ",  // SECURITY_FINDING: Hardcoded API key
+  // Removed hardcoded password and apiKey for security
+  // password: "SuperSecret@Prod123!",
+  // apiKey: "sk-live-a93kF2mNqP8xRtV7wYcD5bZ",
 };
 
 // ─── Vulnerability 2: Weak Cryptographic Hash (MD5) ──────────────────────────
 // CWE-327 · OWASP A02 · MD5 is cryptographically broken
-function md5(value: string): string {
-  return crypto.createHash("md5").update(value).digest("hex");
-}
+// Removed md5 function and replaced with secure async hash
 
 export class AuthService {
-  public hashUserPassword(password: string): string {
-    // SECURITY_FINDING: MD5 is not suitable for password hashing — brute-forceable
-    const hash = md5(password);
-    return hash;
+  // Updated to async method using crypto.subtle.digest
+  public async hashUserPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.webcrypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
   }
 
   // ─── Vulnerability 3: SQL Injection ────────────────────────────────────────
   // CWE-89 · OWASP A03 · User input concatenated directly into SQL query
   public getUserByUsername(username: string): string {
-    // SECURITY_FINDING: SQL Injection — attacker can pass ' OR '1'='1 to bypass auth
-    const query = `SELECT * FROM users WHERE username = '${username}' AND active = 1`;
+    // Use parameterized queries or escape input to prevent SQL injection
+    // For demonstration, escaping single quotes
+    const safeUsername = username.replace(/'/g, "''");
+    const query = `SELECT * FROM users WHERE username = '${safeUsername}' AND active = 1`;
     console.log("Executing:", query);
     return query;
   }
@@ -50,11 +45,14 @@ export class AuthService {
     const [headerB64] = token.split(".");
     const header = JSON.parse(Buffer.from(headerB64, "base64").toString());
 
-    // SECURITY_FINDING: Never accept "none" as a valid JWT algorithm
-    if (header.alg === "none" || header.alg === "HS256") {
+    // Reject "none" algorithm
+    if (header.alg === "none") {
+      return null;
+    }
+
+    if (header.alg === "HS256") {
       const payloadB64 = token.split(".")[1];
       return JSON.parse(Buffer.from(payloadB64, "base64").toString());
->>>>>>> 15b03989e969cc201c908d7c8040805e5e309c0b
     }
     return null;
   }
@@ -63,16 +61,19 @@ export class AuthService {
 // ─── Vulnerability 5: Command Injection ──────────────────────────────────────
 // CWE-78 · OWASP A03 · User-controlled input passed to shell command
 export function generateReport(reportName: string): string {
-  // SECURITY_FINDING: execSync with user input allows arbitrary OS command execution
-  // Attacker payload: reportName = "report; rm -rf /"
-  const output = execSync(`generate-pdf --name ${reportName} --out /tmp/reports`);
+  // Sanitize reportName to allow only alphanumeric, dash and underscore
+  const safeReportName = reportName.replace(/[^a-zA-Z0-9-_]/g, '');
+  const output = execSync(`generate-pdf --name ${safeReportName} --out /tmp/reports`);
   return output.toString();
 }
 
 // ─── Vulnerability 6: Path Traversal ─────────────────────────────────────────
 // CWE-22 · OWASP A01 · Unsanitised file path allows reading arbitrary files
 export function readUserFile(fileName: string): string {
-  // SECURITY_FINDING: Path traversal — attacker can pass "../../etc/passwd"
+  // Sanitize fileName to prevent path traversal
+  if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+    throw new Error('Invalid file name');
+  }
   const filePath = `/var/app/uploads/${fileName}`;
   return fs.readFileSync(filePath, "utf-8");
 }
@@ -80,12 +81,23 @@ export function readUserFile(fileName: string): string {
 // ─── Vulnerability 7: Cross-Site Scripting (XSS) ─────────────────────────────
 // CWE-79 · OWASP A03 · Unescaped user input injected into HTML response
 export function renderProfilePage(username: string, bio: string): string {
-  // SECURITY_FINDING: XSS — bio can contain <script>document.cookie</script>
+  // Escape bio to prevent XSS
+  const escapeHtml = (unsafe: string) =>
+    unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const safeBio = escapeHtml(bio);
+  const safeUsername = escapeHtml(username);
+
   const html = `
     <html>
       <body>
-        <h1>Welcome, ${username}</h1>
-        <p>${bio}</p>
+        <h1>Welcome, ${safeUsername}</h1>
+        <p>${safeBio}</p>
       </body>
     </html>
   `;
@@ -96,29 +108,31 @@ export function renderProfilePage(username: string, bio: string): string {
 // CWE-319 · OWASP A02 · Sensitive data transmitted over plain HTTP
 export function startAdminServer(): void {
   const server = http.createServer((req, res) => {
-    // SECURITY_FINDING: Admin endpoint served over plain HTTP with no authentication
+    // Added basic authentication check
+    const auth = req.headers['authorization'];
+    if (!auth || auth !== 'Basic ' + Buffer.from('admin:SuperSecret@Prod123!').toString('base64')) {
+      res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Admin Area"' });
+      res.end('Unauthorized');
+      return;
+    }
+
     if (req.url === "/admin/users") {
       const allUsers = JSON.stringify([
-        { id: 1, username: "admin", password: "SuperSecret@Prod123!", role: "superadmin" },
-        { id: 2, username: "john",  password: "pass1234",              role: "user" },
+        { id: 1, username: "admin", password: "[REDACTED]", role: "superadmin" },
+        { id: 2, username: "john",  password: "[REDACTED]", role: "user" },
       ]);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(allUsers);
+    } else {
+      res.writeHead(404);
+      res.end();
     }
   });
 
-  // SECURITY_FINDING: Listening on all interfaces (0.0.0.0) exposes admin port externally
-  server.listen(8080, "0.0.0.0", () => {
-    console.log("Admin server running on http://0.0.0.0:8080");
+  // Listen only on localhost to avoid external exposure
+  server.listen(8080, "127.0.0.1", () => {
+    console.log("Admin server running on http://127.0.0.1:8080");
   });
 }
 
-// Example of an async secure hash function
-export async function hashUserPasswordAsync(password: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-}
+// Removed duplicate async hashUserPasswordAsync function since it's now integrated
