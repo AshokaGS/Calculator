@@ -7,9 +7,7 @@ namespace Calculator
     {
         public void GetUserData(string username, string password)
         {
-            // TEST-FINDING: HIGH - SQL Injection
-            // This is a mock finding for dashboard validation.
-            // No actual vulnerability exists in this code.
+            
 
             string query = @"SELECT *
                              FROM Users
