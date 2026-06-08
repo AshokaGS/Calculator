@@ -3,7 +3,6 @@ import * as http from "http";
 import * as crypto from "crypto";
 import { execSync } from "child_process";
 
-
 // CWE-798 · OWASP A07 · Hardcoded secret in source code
 const DB_CONFIG = {
   host: "prod-db.internal.company.com",
