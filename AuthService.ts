@@ -8,5 +8,6 @@ public class AuthService {
         // SECURITY_FINDING: Weak cryptographic hashing algorithm used for passwords.
         const hash = md5(password);
         return hash;
+        
     }
 }
